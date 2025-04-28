@@ -4,6 +4,9 @@ import threading
 import arcade
 import math
 import sys
+import os
+
+import threading
 
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     os.chdir(sys._MEIPASS)
@@ -69,11 +72,16 @@ PLAYER_MAX_VERTICAL_SPEED = 2400
 # Force applied while on the ground
 THRUST_FORCE = 2800
 
+# Networking
+SEND_INTERVAL = 1.0 / 30.0  # Send inputs at 30Hz
+
+recv_lock = threading.Lock()
 
 class NetworkClientProtocol(asyncio.DatagramProtocol):
     def __init__(self, recv_states, info):
         self.recv_states = recv_states  # list of dicts
         self.info = info  # {'id': None}
+
 
     def connection_made(self, transport):
         self.transport = transport
@@ -84,17 +92,15 @@ class NetworkClientProtocol(asyncio.DatagramProtocol):
             return
         t = data[0]
         if t == 2 and len(data) >= 2:
-            # assignment
             self.info["id"] = data[1]
-            print("Received player id:", self.info["id"])
         elif t == 3 and len(data) == 1 + 12 * MAX_PLAYERS:
-            # full state
             floats = struct.unpack("!" + "fff" * MAX_PLAYERS, data[1:])
             for i in range(MAX_PLAYERS):
-                x, y, a = floats[i * 3 : (i + 1) * 3]
-                self.recv_states[i]["x"] = x
-                self.recv_states[i]["y"] = y
-                self.recv_states[i]["angle"] = a
+                x, y, a = floats[i * 3: (i + 1) * 3]
+                self.recv_states[i]["target_x"] = x
+                self.recv_states[i]["target_y"] = y
+                self.recv_states[i]["target_angle"] = a
+
 
     def error_received(self, exc):
         print("Network error:", exc)
@@ -161,14 +167,25 @@ class ClientWindow(arcade.Window):
 
         # incoming positions for all players
         self.recv_states = [
-            {"x": WINDOW_WIDTH / 2, "y": WINDOW_HEIGHT / 2, "angle": 0.0}
+            {
+                "x": WINDOW_WIDTH / 2,
+                "y": WINDOW_HEIGHT / 2,
+                "angle": 0.0,
+                "target_x": WINDOW_WIDTH / 2,
+                "target_y": WINDOW_HEIGHT / 2,
+                "target_angle": 0.0,
+            }
             for _ in range(MAX_PLAYERS)
         ]
+        self.recv_lock = threading.Lock()
         self.info = {"id": None}
 
-        # start network thread
+        # Networking
         self.transport = None
         threading.Thread(target=self._start_network, daemon=True).start()
+
+        # Time tracking for network send
+        self.send_timer = 0.0
 
 
 
@@ -254,23 +271,33 @@ class ClientWindow(arcade.Window):
             self.keys["right"] = False
 
     def on_update(self, dt):
-        # 1) always send our input (even before we know our id)
-        if self.transport:
-            b = (
-                (1 if self.keys["up"] else 0) << 0
-                | (1 if self.keys["left"] else 0) << 1
-                | (1 if self.keys["right"] else 0) << 2
-            )
-            # packet type 1, then key-byte
-        self.transport.sendto(bytes([1, b]))
+        # Smooth interpolation factor
+        interpolation_factor = 0.2  # tune this if needed
 
-        # 2) update sprite positions/angles
-        for i, s in enumerate(self.player_list):
-            st = self.recv_states[i]
-            s.center_x = st["x"]
-            s.center_y = st["y"]
-            s.angle = -math.degrees(st["angle"])
+        with self.recv_lock:
+            for i, sprite in enumerate(self.player_list):
+                st = self.recv_states[i]
+                # Interpolate position
+                st["x"] += (st["target_x"] - st["x"]) * interpolation_factor
+                st["y"] += (st["target_y"] - st["y"]) * interpolation_factor
+                st["angle"] += (st["target_angle"] - st["angle"]) * interpolation_factor
 
+                # Apply to sprite
+                sprite.center_x = st["x"]
+                sprite.center_y = st["y"]
+                sprite.angle = -math.degrees(st["angle"])
+
+        # Network input send throttling
+        self.send_timer += dt
+        if self.send_timer >= SEND_INTERVAL:
+            self.send_timer = 0.0
+            if self.transport:
+                b = (
+                        (1 if self.keys["up"] else 0) << 0
+                        | (1 if self.keys["left"] else 0) << 1
+                        | (1 if self.keys["right"] else 0) << 2
+                )
+                self.transport.sendto(bytes([1, b]))
 
     def on_draw(self):
         """Draw everything"""
