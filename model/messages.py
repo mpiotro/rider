@@ -1,6 +1,6 @@
-from dataclasses import dataclass
-from typing import Optional, Dict, Any
 import json
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -33,7 +33,7 @@ class JoinMessage(BaseMessage):
 
 @dataclass
 class MoveMessage(BaseMessage):
-    position: Dict[str, Any]
+    position: dict[str, Any]
 
 
 @dataclass
@@ -43,4 +43,4 @@ class LeaveMessage(BaseMessage):
 
 @dataclass
 class UnknownMessage(BaseMessage):
-    details: Optional[str] = None
+    details: str | None = None

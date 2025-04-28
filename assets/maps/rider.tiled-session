@@ -1,0 +1,48 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "": {
+            "scaleInEditor": 1
+        },
+        "rider.tmx": {
+            "scale": 1,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 976.5,
+                "y": 510
+            }
+        },
+        "rider.tmx#lines": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "rider.tmx#objects": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
+        "rider.tmx#track": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1
+        }
+    },
+    "last.imagePath": "/Users/MICPI/Labs/rider/assets/sprites/Objects",
+    "map.height": 32,
+    "map.lastUsedFormat": "tmx",
+    "map.width": 60,
+    "openFiles": [
+    ],
+    "project": "rider.tiled-project",
+    "recentFiles": [
+        "rider.tmx"
+    ],
+    "tileset.embedInMap": true,
+    "tileset.type": 1
+}

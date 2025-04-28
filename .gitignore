@@ -11,3 +11,6 @@ wheels/
 
 # Idea files
 .idea/
+
+# MacOS
+.DS_Store
