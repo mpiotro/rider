@@ -3,6 +3,10 @@ import struct
 import threading
 import arcade
 import math
+import sys
+
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    os.chdir(sys._MEIPASS)
 
 # — CONFIG —
 SERVER_HOST = "127.0.0.1"
